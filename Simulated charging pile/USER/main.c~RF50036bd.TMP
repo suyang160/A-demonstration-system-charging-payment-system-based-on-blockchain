@@ -1,0 +1,105 @@
+#include "sys.h"
+#include "delay.h"
+#include "usart.h"
+#include "led.h"
+ 
+ 
+/************************************************
+ ALIENTEK战舰STM32开发板实验1
+ 跑马灯实验 
+ 技术支持：www.openedv.com
+ 淘宝店铺：http://eboard.taobao.com 
+ 关注微信公众平台微信号："正点原子"，免费获取STM32资料。
+ 广州市星翼电子科技有限公司  
+ 作者：正点原子 @ALIENTEK
+************************************************/
+void Usart2_SendString(char *str);
+
+ int main(void)
+ {
+	u16 t;  
+	u16 len;	
+	u8 flag = 0;
+	delay_init();	    //延时函数初始化	  
+  uart_init(9600);	 //串口初始化为9600
+	uart2_init(9600);	 //串口初始化为4800
+	LED_Init();		  	//初始化与LED连接的硬件接口
+	while(1)
+	{
+		if(flag == 0)
+		{
+			if(KEY0==1)
+			{
+				delay_ms(10);
+				if(KEY0==1)
+				{
+					switch_led = 1;
+					//send message to the computer
+					printf("The car has started\r\n");
+					//control the car go ahead
+					go_ahead = 0; //0 go ahead
+					delay_ms(1000);
+					delay_ms(1000);
+					go_ahead = 1;
+					
+				  //send message by BT to open the car's BT
+					Usart2_SendString("open the BT\r\n");
+					flag = 1;
+				}
+			}
+		}
+		if(flag == 1)
+		{
+			if(KEY0==0)
+			{
+				delay_ms(10);
+				if(KEY0==0)
+				{
+					//close the led
+					switch_led = 0;
+					//send message to computer,finish the process
+					printf("The process has ended\r\n");
+					//when the button is triggered agian,go back the car
+					go_back = 0;
+					delay_ms(1000);
+					delay_ms(1000);
+					go_back = 1;
+					flag = 0;
+				}
+			}
+		}
+		
+		//recive message from car and transmit it to the computer
+		if(USART2_RX_STA&0x8000)
+		 {					   
+				len=USART2_RX_STA&0x3fff;//得到此次接收到的数据长度
+//					for(t=0;t<len;t++)
+//				{
+//					USART_SendData(USART1, USART2_RX_BUF[t]);//向串口1发送数据
+//					while(USART_GetFlagStatus(USART1,USART_FLAG_TC)!=SET);//等待发送结束
+//				}
+			 
+			  if(USART2_RX_BUF[0]=='a'&&USART2_RX_BUF[1]=='u'&&USART2_RX_BUF[2]=='t'&&USART2_RX_BUF[3]=='h')
+				{
+					//the open command
+					printf("start the process of authentication\r\n");
+					delay_ms(1000);
+					delay_ms(1000);
+					printf("Waiting for the charger\r\n");
+				}
+				USART2_RX_STA=0;
+		 }
+		 
+		
+	}
+ }
+ 
+ void Usart2_SendString(char *str)
+{
+		 while(*str)
+		{
+			USART_SendData(USART2,*str);
+			while(USART_GetFlagStatus(USART2, USART_FLAG_TC)!=SET); 
+			str++;
+    }
+}
